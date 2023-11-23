@@ -29,11 +29,16 @@ export async function createInvoice(formData: FormData) {
   const amountInCents = amount * 100;
   const date = new Date().toISOString().split('T')[0];
 
-  await sql`
+  try {
+    await sql`
     INSERT INTO invoices (customer_id, amount, status, date)
     VALUES (${customerId}, ${amountInCents}, ${status}, ${date})
     `;
-
+  } catch (error) {
+    return {
+      message: 'Database Error: Failed to Create Invoice.',
+    };
+  }
   /* Since you're updating the data displayed in the invoices route, you want to clear this cache and trigger a new request to the server.
     You can do this with the revalidatePath function */
   revalidatePath('dashboard/invoices');
@@ -54,18 +59,29 @@ export async function updateInvoice(id: string, formData: FormData) {
   }); // extracting data from the form data, validating with Zod
 
   const amountInCents = amount * 100; // converting amnount to cents
-
-  await sql`
+  try {
+    await sql`
     UPDATE invoices
     SET customer_id = ${customerId}, amount = ${amountInCents}, status = ${status}
     WHERE id = ${id}
   `; // pass variables to sql query
-
+  } catch (error) {
+    return {
+      message: 'Database Error: Failed to Update Invoice.',
+    };
+  }
   revalidatePath('/dashboard/invoices'); // call revalidatePath to clear client cache and make new servant request
   redirect('/dashboard/invoices'); // redirect user back to invoices page once update is submitted
 }
 
 export async function deleteInvoice(id: string) {
-  await sql`DELETE FROM invoices WHERE id = ${id}`;
-  revalidatePath('/dashboard/invoices');
+  try {
+    await sql`DELETE FROM invoices WHERE id = ${id}`;
+    revalidatePath('/dashboard/invoices');
+    return { message: 'Deleted Invoice.' };
+  } catch (error) {
+    return {
+      message: 'Database Error: Failed to Delete Invoice.',
+    };
+  }
 }
